@@ -5,8 +5,9 @@ from matplotlib import pyplot as plt
 
 from utils import create_ground_truth_tensor, create_nms_output
 
-def run_batch(debug, train, device, optimizer, model, image_vals, dist_poly, camera_matrix, im_idxs, 
-              criterion, annotations_dict, sig, file_name, running_loss=0, id_counter=0, params=None):
+def run_batch(debug, train, device, optimizer, model, image_vals, dist_poly, camera_matrix, 
+              im_idxs, criterion, annotations_dict, sig, file_name, running_loss=0, id_counter=0, 
+              params=None):
     if params is not None:
         use_loss = [True, params]
     else:

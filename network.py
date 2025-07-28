@@ -65,12 +65,13 @@ class SimpleBEVNetworkWithResNet(nn.Module):
         if self.feat_extractor_name == "resnet50":
             self.model_name = "resnet-backbone"
             self.feat_extract = models.resnet50(pretrained=True)
-            self.feat_extract = nn.Sequential(*list(self.feat_extract.children())[:-2])  # Cut before global average pooling
+            self.feat_extract = nn.Sequential(*list(self.feat_extract.children())[:-2])
             self.feat_compress = nn.Conv2d(2048, self.nbr_features, kernel_size=1, stride=1)
         elif self.feat_extractor_name == "unet":
             assert unet_features is not None, "UNet features must be specified"
             self.model_name = "unet-backbone-" + str(unet_features)
-            self.feat_extract = UNet(in_channels=3, out_channels=self.nbr_features, features=unet_features)
+            self.feat_extract = UNet(in_channels=3, out_channels=self.nbr_features,
+                                     features=unet_features)
         elif self.feat_extractor_name == "":
             self.model_name = "no-backbone"
             self.nbr_features = 3
@@ -119,8 +120,10 @@ class SimpleBEVNetworkWithResNet(nn.Module):
                 bev_features[batch, ii, :, :, :] = tmp
         return bev_features
     
-    def project_on_ground(self, camera_matrix, dist_poly, image, width=70, height=120, resolution=10, center=(0,0), z=0):
-        center = torch.as_tensor(center, device=image.device) - torch.tensor([width/2, height/2], device=image.device)
+    def project_on_ground(self, camera_matrix, dist_poly, image, width=70, height=120,
+                          resolution=10, center=(0,0), z=0):
+        center = torch.as_tensor(center, device=image.device) - torch.tensor([width/2, height/2],
+                                                                             device=image.device)
         gnd = grid2d(width * resolution, height * resolution).to(image.device) / resolution + center
         pkt = gnd.reshape(-1, 2)
         pkt = torch.cat([pkt, z * torch.ones_like(pkt[..., 0:1])], -1)
@@ -141,10 +144,12 @@ class SimpleBEVNetworkWithResNet(nn.Module):
         assert features.shape[1] == self.nbr_features, \
                 f"After feature extract - Expected {self.nbr_features} features, got {features.shape[1]}"
         if self.debug:
-            sampled_features = self.project_and_sample_voxel_grid(dist_poly, camera_matrix, image_vals)
+            sampled_features = self.project_and_sample_voxel_grid(dist_poly, camera_matrix,
+                                                                  image_vals)
             cv2.imwrite("test.png", sampled_features[0,0,:,:,:].cpu().numpy().transpose(1,2,0)*255)
         sampled_features = self.project_and_sample_voxel_grid(dist_poly, camera_matrix, features)
-        reshaped_features = sampled_features.reshape(dist_poly.shape[0], -1, self.voxel_size[1], self.voxel_size[0])
+        reshaped_features = sampled_features.reshape(dist_poly.shape[0], -1, self.voxel_size[1],
+                                                     self.voxel_size[0])
 
         # Apply 3x3 convolution on the restructured feature map
         bev_features = self.conv3x3(reshaped_features)

@@ -66,8 +66,10 @@ def create_ground_truth_tensor(model, output, annotations_dict, im_idxs):
                  model.voxel_grid_size_row * model.voxel_res) / model.voxel_res + center
     # Col_max and row_max are on the far side to the left (in the image)
     gnd = torch.flip(gnd, (0, 1, 2))
-    gt_io = torch.zeros((output.shape[0], output.shape[2], output.shape[3])).to(dtype=torch.float64)
-    gt_dist = 1e4*torch.ones((output.shape[0], output.shape[2], output.shape[3], 2)).to(dtype=torch.float32)
+    gt_io = torch.zeros((output.shape[0], output.shape[2], 
+                         output.shape[3])).to(dtype=torch.float64)
+    gt_dist = 1e4*torch.ones((output.shape[0], output.shape[2], 
+                              output.shape[3], 2)).to(dtype=torch.float32)
     gt_io = gt_io.to(output.device)
     gt_dist = gt_dist.to(output.device)
     for ii, im_i in enumerate(im_idxs):
@@ -94,9 +96,12 @@ def create_nms_output(model, output, est_d, sig, im_idxs, use_loss, id_counter, 
         tensor = sig(output[b, 0:1, :, :]).permute(1, 2, 0)
         tensor = torch.cat((tensor, gnd.to(tensor.device), est_d[b,:,:,:]), dim=-1)
         data=[id_counter, im_idxs[b], use_loss]
-        detected_circles, id_counter = get_detected_circles_from_tensor(tensor,threshold_detection_score, params[0], data)
+        detected_circles, id_counter = get_detected_circles_from_tensor(tensor,
+                                                                        threshold_detection_score, 
+                                                                        params[0], data)
         if detected_circles != []:
-            detections=soft_non_maximum_suppression(detected_circles,threshold_detection_score,params[1],params[2])
+            detections=soft_non_maximum_suppression(detected_circles,threshold_detection_score,
+                                                    params[1],params[2])
         else:
             detections = []
     return detections, id_counter

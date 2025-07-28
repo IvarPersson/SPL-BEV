@@ -74,14 +74,16 @@ def show_image_with_voxels(save=True, data_dir="./data/", save_dir="./data_illus
         voxel_grid = np.stack((xv, yv)).reshape(2,-1).T
         voxel_grid = np.concatenate((voxel_grid, z*np.ones((voxel_grid.shape[0], 1))), axis=1)
         image_shape = [image.shape[2], image.shape[0], image.shape[1]]
-        image_points = unnormalize(world_to_image(np.array(camera_matrix), np.array(dist_poly), voxel_grid), image_shape)
+        image_points = unnormalize(world_to_image(np.array(camera_matrix), np.array(dist_poly),
+                                                  voxel_grid), image_shape)
         for point in image_points:
             inside = (point[0] >= 0) & (point[0] <= image_shape[2]) & \
                         (point[1] >= 0) & (point[1] <= image_shape[1])
             if inside:
                 cv2.circle(image, (int(point[0]), int(point[1])), 2, (0, 0, 255), 4)
         ori = np.array([0., 0., 0.])
-        origin = unnormalize(world_to_image(np.array(camera_matrix), np.array(dist_poly), ori), image_shape)
+        origin = unnormalize(world_to_image(np.array(camera_matrix), np.array(dist_poly), ori),
+                             image_shape)
         cv2.circle(image, (int(origin[0]), int(origin[1])), 4, (0, 255, 255), 10)
         for anno in trn_annotations_dict[id_im]:
             if anno['image_id'] == id_im:

@@ -8,7 +8,8 @@ from sskit import project_on_ground, imread
 
 from utils import load_annotations
 
-def present_image_and_bev(debug=False, save_dir:str="./qualitative_results/", disp_est:str=None, data_dir="./data/", score_threshold=0.5, im_stop=10):
+def present_image_and_bev(debug=False, save_dir:str="./qualitative_results/", disp_est:str=None, 
+                          data_dir="./data/", score_threshold=0.5, im_stop=10):
     _, _, image_dict, annotations_dict = load_annotations(debug, data_dir, get_val=True)
 
     for id_im, _ in enumerate(image_dict):
@@ -22,7 +23,8 @@ def present_image_and_bev(debug=False, save_dir:str="./qualitative_results/", di
             image_path = f'{data_dir}train/{file_name}'
         image = cv2.imread(image_path)
 
-        bev_tensor = project_on_ground(image_data['camera_matrix'], image_data['dist_poly'], imread(image_path)[None] + 1e-6, 110, 110, 10)[0]
+        bev_tensor = project_on_ground(image_data['camera_matrix'], image_data['dist_poly'],
+                                       imread(image_path)[None] + 1e-6, 110, 110, 10)[0]
         bev_view = bev_tensor.numpy().transpose(1,2,0)[:,:,::-1].copy() * 255
         msk = bev_view.sum(2) == 0
         for i in range(3):
@@ -35,7 +37,8 @@ def present_image_and_bev(debug=False, save_dir:str="./qualitative_results/", di
             y_max = y_min + height
             pos_on_pitch = ((np.array(annotation['position_on_pitch']) * 10)).astype(np.int16)
             cv2.rectangle(image, (x_min, y_min), (x_max, y_max), [255,0,0], 3)
-            cv2.circle(bev_view, (pos_on_pitch[0]+int(bev_view.shape[0]/2), pos_on_pitch[1]+int(bev_view.shape[1]/2)), 8, [255, 0, 0], -1)
+            cv2.circle(bev_view, (pos_on_pitch[0]+int(bev_view.shape[0]/2), 
+                                  pos_on_pitch[1]+int(bev_view.shape[1]/2)), 8, [255, 0, 0], -1)
 
         if disp_est is not None:
             with open(disp_est, 'r') as file:
@@ -53,7 +56,8 @@ def present_image_and_bev(debug=False, save_dir:str="./qualitative_results/", di
                 x_max = x_min + width
                 y_max = y_min + height
                 pos_on_pitch = ((np.array(annotation['position_on_pitch'][:2]) * 10)).astype(np.int16)
-                cv2.circle(bev_view, (pos_on_pitch[0]+int(bev_view.shape[0]/2), pos_on_pitch[1]+int(bev_view.shape[1]/2)), 10, [0, 0, 255], 2)
+                cv2.circle(bev_view, (pos_on_pitch[0]+int(bev_view.shape[0]/2),
+                                      pos_on_pitch[1]+int(bev_view.shape[1]/2)), 10, [0, 0, 255], 2)
         bev_view = cv2.rotate(bev_view, cv2.ROTATE_90_CLOCKWISE)
         bev_view = cv2.flip(bev_view, 0)
 
@@ -61,7 +65,8 @@ def present_image_and_bev(debug=False, save_dir:str="./qualitative_results/", di
         img_height, _ = image.shape[:2]
         aspect_ratio = bev_width / bev_height
         new_bev_width = img_height * aspect_ratio
-        bev_view_resized = cv2.resize(bev_view, (int(new_bev_width), img_height), interpolation=cv2.INTER_AREA)
+        bev_view_resized = cv2.resize(bev_view, (int(new_bev_width), img_height),
+                                      interpolation=cv2.INTER_AREA)
         bev_view_resized = np.clip(bev_view_resized, 0, 255).astype(np.uint8)
         concatenated_image = np.concatenate((image, bev_view_resized), axis=1)
         scale_percent = 30
@@ -83,4 +88,5 @@ if __name__ == "__main__":
     debug = args.debug_mode
     data_path = args.data_path
     save_dir = args.save_path
-    present_image_and_bev(debug, save_dir=save_dir, disp_est=None, data_dir=data_path, score_threshold=0.76)
+    present_image_and_bev(debug, save_dir=save_dir, disp_est=None, data_dir=data_path,
+                          score_threshold=0.76)

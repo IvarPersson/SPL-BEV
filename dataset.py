@@ -16,4 +16,5 @@ class BEVDataset(Dataset):
         image_vals = cv2.imread(image_path).transpose(2, 0, 1)
         camera_matrix = torch.FloatTensor(image["camera_matrix"])
         dist_poly = torch.FloatTensor(image['dist_poly'])
-        return torch.FloatTensor(image_vals/255), dist_poly, camera_matrix, idx, image['file_name'][:-4]
+        return torch.FloatTensor(image_vals/255), dist_poly, camera_matrix,\
+            idx, image['file_name'][:-4]

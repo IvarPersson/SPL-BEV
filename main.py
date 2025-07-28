@@ -33,8 +33,10 @@ def main(data_dir, save_dir, cont, debug, num_epochs, params, backbone, batch_si
         val_dataset = BEVDataset(val_images_dict, image_dir=f'{data_dir}val/')
     num_workers = 2*batch_size if 2*batch_size < 16 else 16
     num_workers = 0
-    trn_data_loader = DataLoader(trn_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-    val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    trn_data_loader = DataLoader(trn_dataset, batch_size=batch_size, shuffle=False, 
+                                 num_workers=num_workers)
+    val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
+                                 num_workers=num_workers)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #TODO
     device = torch.device("cpu")
@@ -77,8 +79,9 @@ def main(data_dir, save_dir, cont, debug, num_epochs, params, backbone, batch_si
         id_counter = 0
 
         for batch_idx, (image_vals, dist_poly, camera_matrix, im_idxs, file_name) in enumerate(trn_data_loader):
-            output, gt_io, e_loss, est_dict, _ = run_batch(debug, True, device, optimizer, model, image_vals, dist_poly, camera_matrix, im_idxs, 
-              loss_fkt, trn_annotations_dict, sig, file_name, running_loss, id_counter=id_counter)
+            output, gt_io, e_loss, est_dict, _ = run_batch(debug, True, device, optimizer, model,
+                image_vals, dist_poly, camera_matrix, im_idxs, loss_fkt, trn_annotations_dict, sig,
+                file_name, running_loss, id_counter=id_counter)
             training_pos_est.extend(est_dict)
             id_counter = len(training_pos_est)
             epoch_loss += sum(e_loss)
@@ -117,8 +120,6 @@ def main(data_dir, save_dir, cont, debug, num_epochs, params, backbone, batch_si
         id_counter = 0
 
         for batch_idx, (image_vals, dist_poly, camera_matrix, im_idxs, file_name) in enumerate(val_data_loader):
-            #debug, train, device, optimizer, model, image_vals, dist_poly, camera_matrix, im_idxs, 
-            #criterion, annotations_dict, sig, file_name, running_loss=0, id_counter=0, params=None
             output, gt_io, e_loss, val_dict, id = run_batch(debug, False, device, optimizer, model, image_vals, dist_poly, camera_matrix, im_idxs, 
               loss_fkt, val_annotations_dict, sig, file_name, id_counter=id_counter)
             val_epoch_loss += sum(e_loss)

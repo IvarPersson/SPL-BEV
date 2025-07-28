@@ -42,19 +42,23 @@ def draw_circles_on_tensor(tensor, radius=0.5):
     plt.gca().invert_yaxis()
     plt.show()
 
-def get_detected_circles_from_tensor(tensor, threshold_detection_score=0.5, radius_detection_circle=0.5, data=None):
+def get_detected_circles_from_tensor(tensor, threshold_detection_score=0.5,
+                                     radius_detection_circle=0.5, data=None):
     """
-    Create a dictionary with coordinates and detection circle radius where the first channel is over a given threshold.
-    The x and y values are taken from the second and third channels, respectively.
+    Create a dictionary with coordinates and detection circle radius where the first channel is
+    over a given threshold. The x and y values are taken from the second and third channels,
+    respectively.
     
     Parameters:
-        tensor (torch.Tensor): A tensor of shape (M, N, 3), where the second channel contains x values 
-                               and the third channel contains y values.
-        threshold_detection_score (float): The threshold for detection in the first channel. Default is 0.5.
+        tensor (torch.Tensor): A tensor of shape (M, N, 3), where the second channel contains x
+                               values and the third channel contains y values.
+        threshold_detection_score (float): The threshold for detection in the first channel. 
+                                           Default is 0.5.
         radius_detection_circle (float): The radius of the detection circle. Default is 0.5.
     
     Returns:
-        dict: A dictionary with keys as indices (x, y) and values as the radius for each detection circle.
+        dict: A dictionary with keys as indices (x, y) and values as the radius for each detection
+              circle.
     """
     if data is None:
         detected_circles = {}
@@ -109,8 +113,9 @@ def plot_detected_circles(detected_circles, color='red'):
     Plot circles on a 2D plot based on the detected circles dictionary.
     
     Parameters:
-        detected_circles (dict): A dictionary where the key is the detection index and the value contains 'x', 'y' coordinates
-                                  and 'radius_detection_circle' for plotting circles.
+        detected_circles (dict): A dictionary where the key is the detection index and the value
+                                 contains 'x', 'y' coordinates and 'radius_detection_circle' for
+                                 plotting circles.
     """
     plt.figure(figsize=(6, 6))
     for detection in detected_circles:
