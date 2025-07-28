@@ -184,14 +184,14 @@ if __name__ == '__main__':
     parser.add_argument("-a", "--alvis_train", help = "Set flag if run on Alvis HPC, log is saved in personal folder",
                        action="store_true")
     args = parser.parse_args()
-    debug = True #args.debug_mode
+    debug = args.debug_mode
     cont = args.continue_train
     backbone = args.backbone
     if backbone is None:
         backbone = ""
     hpc = args.alvis_train
     params = args.parameters
-    epochs = 1#args.epochs
+    epochs = args.epochs
     if epochs is None:
         epochs = 10
     batch_size = args.batch_size
