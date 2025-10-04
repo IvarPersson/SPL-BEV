@@ -44,4 +44,4 @@ pages="340--350",
 }
 ```
 
-![Qualitative results](images/qual-res.png)
+![Qualitative results](images/qual-res.jpg)
