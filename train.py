@@ -31,11 +31,10 @@ def run_batch(debug, train, device, optimizer, model, image_vals, dist_poly, cam
         loss.backward()
         optimizer.step()
         running_loss += (loss1.item() + loss2.item())
-        batch_est = []
-    else:
+    batch_est = []
+    if debug and not train:
         batch_est, id_counter = create_nms_output(model, output, est_d, sig, im_idxs,
                                                   use_loss, id_counter, (1,0.5,0))
-    if debug and not train:
         plt.figure(figsize=(10, 10))
         plt.subplot(2, 2, 1)
         output_io = sig(output[0, 0, :, :]).detach().cpu().numpy()

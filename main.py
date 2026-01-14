@@ -7,17 +7,14 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn as nn
 import numpy as np
-import logging
-from clearml import Task, Logger
-from sskit.coco import LocSimCOCOeval
-from xtcocotools.coco import COCO
 
-from network import SimpleBEVNetworkWithResNet
+from network import BEVNetwork
 from dataset import BEVDataset
 from train import run_batch
 from utils import load_annotations, get_pitch_size, log_training_data, create_logger
 
-def main(data_dir, save_dir, cont, debug, num_epochs, params, backbone, batch_size, eval_only=False):
+def main(data_dir, save_dir, cont, debug, params, backbone, batch_size, tail_type, 
+         tail_param, sample_strat, num_epochs=100):
     (trn_images_dict,
      trn_annotations_dict,
      val_images_dict,
@@ -31,24 +28,28 @@ def main(data_dir, save_dir, cont, debug, num_epochs, params, backbone, batch_si
     else:
         trn_dataset = BEVDataset(trn_images_dict, image_dir=f'{data_dir}train/')
         val_dataset = BEVDataset(val_images_dict, image_dir=f'{data_dir}val/')
-    num_workers = 2*batch_size if 2*batch_size < 16 else 16
     num_workers = 0
     trn_data_loader = DataLoader(trn_dataset, batch_size=batch_size, shuffle=False, 
                                  num_workers=num_workers)
     val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
                                  num_workers=num_workers)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    #TODO
-    device = torch.device("cpu")
 
     # Instantiate the model, loss function, and optimizer
     voxel_grid_size = [voxel_grid_size_row, voxel_grid_size_col, 3]
-    if backbone == "unet":
-        model = SimpleBEVNetworkWithResNet(feature_extractor=backbone, res_net_tail=False,
-                                           voxel_grid_size=voxel_grid_size,                                      
-                                           feature_channels=params[0], unet_features=params)
+    if backbone == "unet" or backbone == "mobile-unet":
+        if tail_type == True: # ResNet tail
+            model = BEVNetwork(feature_extractor=backbone,
+                                               feature_channels=params[-1], unet_features=params[:-1], res_net_tail=tail_type,
+                                               res_block_channels=tail_param, sampling_strategy=sample_strat,
+                                               voxel_grid_size=voxel_grid_size)
+        else: # No ResNet tail
+            model = BEVNetwork(feature_extractor=backbone,
+                                               feature_channels=params[-1], unet_features=params[:-1], res_net_tail=tail_type,
+                                               tail_param=tail_param, sampling_strategy=sample_strat,
+                                               voxel_grid_size=voxel_grid_size)
     else:
-        model = SimpleBEVNetworkWithResNet(feature_extractor=backbone, res_net_tail=False,
+        model = BEVNetwork(feature_extractor=backbone, res_net_tail=False,
                                            voxel_grid_size=voxel_grid_size, feature_channels=params)
     if cont is not None:
         model.load_state_dict(torch.load(cont))
@@ -90,13 +91,8 @@ def main(data_dir, save_dir, cont, debug, num_epochs, params, backbone, batch_si
             running_loss2 += e_loss[1]
             bs_print = 30
             if batch_idx % bs_print == (bs_print - 1):
-                log_training_data(f"Epoch {epoch+1}, Batch {batch_idx} of {len(trn_data_loader)} Loss: {running_loss / bs_print:.4f}")
-                Logger.current_logger().report_scalar("train", "loss1",
-                                                      iteration=(epoch * len(trn_data_loader) + batch_idx),
-                                                      value=running_loss1/bs_print)
-                Logger.current_logger().report_scalar("train", "loss2",
-                                                      iteration=(epoch * len(trn_data_loader) + batch_idx),
-                                                      value=running_loss2/bs_print)
+                log_training_data(f"Epoch {epoch+1}, Batch {batch_idx} of {len(trn_data_loader)} \
+                                  Loss: {running_loss / bs_print:.4f}")
                 running_loss = 0.0
                 running_loss1 = 0.0
                 running_loss2 = 0.0
@@ -132,27 +128,6 @@ def main(data_dir, save_dir, cont, debug, num_epochs, params, backbone, batch_si
         os.makedirs(f"{save_dir}", exist_ok=True)
         with open(f"{save_dir}{model.model_name}.json", "w") as json_file:
             json.dump(tmp, json_file, indent=4)
-        est_data = COCO(annotation_file= "./", ann_data=tmp)
-        if debug:
-            path_val = f'{data_dir}annotations/mini.json'
-        else:
-            path_val = f'{data_dir}annotations/val.json'
-        with open(path_val, 'r') as file:
-            data_val = json.load(file)
-        gt_data = COCO(annotation_file="./", ann_data=data_val)
-        eval = LocSimCOCOeval(gt_data, est_data, 'bbox', [0.089, 0.089], True)
-        eval.params.useSegm = None
-        # coco_eval.params.position_from_keypoint_index = 1
-        print(f"Validation results on epoch: {epoch}")
-        eval.evaluate()
-        eval.accumulate()
-        eval.summarize()
-        print(f"mAP LocSim: {eval.stats[0]}")
-        print(f"Precision: {eval.stats[12]}")
-        print(f"Recall: {eval.stats[13]}")
-        print(f"F1: {eval.stats[14]}")
-        print(f"Frame Accuracy: {eval.stats[16]}")
-        print(f"Score threshold: {eval.stats[15]}")
             
         if (val_epoch_loss / len(val_data_loader)) < best_loss:
             os.makedirs(f"./models/", exist_ok=True)
@@ -160,12 +135,6 @@ def main(data_dir, save_dir, cont, debug, num_epochs, params, backbone, batch_si
             best_loss = val_epoch_loss / len(val_data_loader)
         log_training_data(f"End of Epoch {epoch} loss: {epoch_loss / len(trn_data_loader)}")
         log_training_data(f"\tValidation loss: {val_epoch_loss / len(val_data_loader)}")
-        Logger.current_logger().report_scalar("Whole epoch", "train-loss",
-                                              iteration=(epoch),
-                                              value=epoch_loss / len(trn_data_loader))
-        Logger.current_logger().report_scalar("Whole epoch", "val-loss",
-                                              iteration=(epoch),
-                                              value=val_epoch_loss / len(val_data_loader))
     log_training_data("Training complete!")
 
 if __name__ == '__main__':
@@ -176,38 +145,47 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--save_directory", help = "Directory where data and results are saved")
     parser.add_argument("-b", "--backbone", help = "Which backbone to use")
     parser.add_argument("-p", "--parameters", help = "Number of features used in unet")
-    parser.add_argument("-e", "--epochs", help = "Number of Epochs to train")
+    parser.add_argument("-t", "--tail_param", help = "Number of features in tail")
+    parser.add_argument("-ss", "--sampl", help = "Sampling strategy to use")
+    parser.add_argument("-tt", "--tail_type", help = "Type of tail to use")
     parser.add_argument("-bs", "--batch_size", help = "Batch size when training")
-    parser.add_argument("-e", "--eval_only", help = "Set to true if only evaluation is to be run",
-                        action="store_true")
     parser.add_argument("-c", "--continue_train", help = "Continues to run training from saved model with the name provided")
-    parser.add_argument("-a", "--alvis_train", help = "Set flag if run on Alvis HPC, log is saved in personal folder",
-                       action="store_true")
+    parser.add_argument("-e", "--epochs", help = "Number of Epochs to train")
     args = parser.parse_args()
     debug = args.debug_mode
     cont = args.continue_train
-    backbone = args.backbone
+    backbone = "unet"#args.backbone
     if backbone is None:
         backbone = ""
-    hpc = args.alvis_train
-    params = args.parameters
-    epochs = args.epochs
-    if epochs is None:
-        epochs = 10
     batch_size = args.batch_size
     if batch_size is None:
         batch_size = 1
     else:
         batch_size = int(batch_size)
+    params = "4,8,16,8"#args.parameters
     if params is not None:
         params = params.split(",")
         params = [int(p) for p in params]
-    data_dir = args.data_directory
+    data_dir = "/home/ivar/Documents/FootballPoseNet/data/"#args.data_directory
     save_dir = args.save_directory
-    eval_only = args.eval_only
-    task = Task.init(project_name="FootballBEV", task_name=f"Training-{backbone}-{params}")
+    tail_param = args.tail_param
+    if tail_param is not None:
+        tail_param = [int(p) for p in tail_param.split(",")]
+    else:
+        tail_param = 256
+    tail_type = args.tail_type
+    if tail_type is None:
+        tail_type = False
+    sample_strat = args.sampl
+    if sample_strat is None:
+        sample_strat = "bilinear"
+
+    epochs = args.epochs
+    if epochs is None:
+        epochs = 100
 
     create_logger()
     log_training_data(f"Runs training - debug: {debug}, continue: {cont},\n\tdata_dir: {data_dir}")
     log_training_data(f"Epochs: {epochs}, parameters: {params}")
-    main(data_dir, save_dir, cont, debug, epochs, params, backbone, batch_size, eval_only)
+    main(data_dir, save_dir, cont, debug, params, backbone, batch_size, tail_type, tail_param, 
+         sample_strat, num_epochs=epochs)
