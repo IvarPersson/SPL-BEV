@@ -237,7 +237,7 @@ class BEVNetwork(nn.Module):
                                  kernel_size=3, stride=1, padding=1)
         self.debug = debug
         # Untrained ResNet-style blocks for further processing
-        if self.res_net_tail == "my3dConv":
+        if self.res_net_tail == "2dConv":
             self.res_blocks = nn.Sequential()
             ii = self.voxel_size[2] * self.nbr_features
             for p in tail_param:
@@ -253,7 +253,7 @@ class BEVNetwork(nn.Module):
                 ii = p
             self.extra_block = nn.Conv2d(self.voxel_size[2] * ii, 3, kernel_size=3, stride=1, 
                                          padding=1)
-        elif self.res_net_tail == True:
+        elif self.res_net_tail == "resnet":
             self.res_block1 = ResNetBlock(self.nbr_features, self.res_block_channels)
             self.res_block2 = ResNetBlock(self.res_block_channels, 3)
         else:
@@ -290,7 +290,7 @@ class BEVNetwork(nn.Module):
         reshaped_features = sampled_features.reshape(dist_poly.shape[0], -1, self.voxel_size[1],
                                                      self.voxel_size[0])
 
-        if self.res_net_tail == "my3dConv":
+        if self.res_net_tail == "2dConv":
             bev_features = reshaped_features
             for block in self.res_blocks[:-1]:
                 bev_features = block(bev_features)
@@ -306,7 +306,7 @@ class BEVNetwork(nn.Module):
             bev_features = self.extra_block(bev_features)
         else:
             bev_features = self.conv3x3(reshaped_features)
-            if self.res_net_tail:
+            if self.res_net_tail == "resnet":
                 bev_features = self.res_block1(bev_features)
                 bev_features = self.res_block2(bev_features)
             else:
