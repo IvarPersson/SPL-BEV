@@ -154,7 +154,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     debug = args.debug_mode
     cont = args.continue_train
-    backbone = "unet"#args.backbone
+    backbone = args.backbone
     if backbone is None:
         backbone = ""
     batch_size = args.batch_size
@@ -162,11 +162,11 @@ if __name__ == '__main__':
         batch_size = 1
     else:
         batch_size = int(batch_size)
-    params = "4,8,16,8"#args.parameters
+    params = args.parameters
     if params is not None:
         params = params.split(",")
         params = [int(p) for p in params]
-    data_dir = "/home/ivar/Documents/FootballPoseNet/data/"#args.data_directory
+    data_dir = args.data_directory
     save_dir = args.save_directory
     tail_param = args.tail_param
     if tail_param is not None:
