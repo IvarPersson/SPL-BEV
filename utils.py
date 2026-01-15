@@ -3,9 +3,38 @@ import logging
 
 import numpy as np
 import torch
+from torch.ao.quantization import QuantStub, DeQuantStub
 from sskit.utils import grid2d
 
 from soft_nms import get_detected_circles_from_tensor, soft_non_maximum_suppression
+
+class FloatIsland(torch.nn.Module):
+    """Dequantize input, run a float submodule, requantize output."""
+    def __init__(self, submodule: torch.nn.Module):
+        super().__init__()
+        self.dequant = DeQuantStub()
+        self.sub = submodule
+        self.quant = QuantStub()
+        # ensure the inner submodule is never quantized
+        self.sub.qconfig = None
+
+    def forward(self, x, *args, **kwargs):
+        x = self.dequant(x)
+        y = self.sub(x, *args, **kwargs)
+        return self.quant(y)
+
+
+def wrap_named_module_as_float_island(root: torch.nn.Module, dotted_name: str, qconfig):
+    parent = root
+    parts = dotted_name.split(".")
+    for p in parts[:-1]:
+        parent = getattr(parent, p)
+    last = parts[-1]
+    sub = getattr(parent, last)
+    wrapper = FloatIsland(sub)
+    wrapper.qconfig = qconfig # ensure stubs get observers
+    setattr(parent, last, wrapper)
+
 
 def load_annotations(debug=False, data_dir="./data/", get_val=False):
     if debug:
