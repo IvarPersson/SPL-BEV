@@ -38,16 +38,16 @@ def main(data_dir, save_dir, cont, debug, params, backbone, batch_size, tail_typ
     # Instantiate the model, loss function, and optimizer
     voxel_grid_size = [voxel_grid_size_row, voxel_grid_size_col, 3]
     if backbone == "unet" or backbone == "mobile-unet":
-        if tail_type == True: # ResNet tail
+        if tail_type == "resnet":
             model = BEVNetwork(feature_extractor=backbone,
-                                               feature_channels=params[-1], unet_features=params[:-1], res_net_tail=tail_type,
-                                               res_block_channels=tail_param, sampling_strategy=sample_strat,
-                                               voxel_grid_size=voxel_grid_size)
+                               feature_channels=params[-1], unet_features=params[:-1], 
+                               res_net_tail=tail_type, res_block_channels=tail_param, 
+                               sampling_strategy=sample_strat, voxel_grid_size=voxel_grid_size)
         else: # No ResNet tail
-            model = BEVNetwork(feature_extractor=backbone,
-                                               feature_channels=params[-1], unet_features=params[:-1], res_net_tail=tail_type,
-                                               tail_param=tail_param, sampling_strategy=sample_strat,
-                                               voxel_grid_size=voxel_grid_size)
+            model = BEVNetwork(feature_extractor=backbone, 
+                               feature_channels=params[-1], unet_features=params[:-1],
+                               res_net_tail=tail_type, tail_param=tail_param, 
+                               sampling_strategy=sample_strat, voxel_grid_size=voxel_grid_size)
     else:
         model = BEVNetwork(feature_extractor=backbone, res_net_tail=False,
                                            voxel_grid_size=voxel_grid_size, feature_channels=params)
